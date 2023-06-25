@@ -34,7 +34,19 @@ async function run() {
 
         const userCollesction = client.db('creativeLensDB').collection('users');
 
+        // users api
         app.post('/users', async (req, res) => {
+            // console.log(req.body)
+            const user = req.body;
+            const query = { email: user.email };
+
+            const isFound = await userCollesction.findOne(query);
+            // console.log(isFound)
+            if (!isFound) {
+                const result = await userCollesction.insertOne(user);
+                res.send(result);
+            }
+            res.send({ status: false })
 
         })
 
