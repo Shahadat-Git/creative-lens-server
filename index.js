@@ -16,6 +16,26 @@ app.get('/', (req, res) => {
     res.send('server is running');
 });
 
+const verifyJWT = (req, res, next) => {
+    const authorization = req?.headers?.authorization;
+    if (!authorization) {
+        return res.status(401).send({ status: 'unauthorized' });
+    }
+
+    // bearer token
+    const token = authorization.split(' ')[1];
+    // console.log(token)
+
+    jwt.verify(token, process.env.JWT_ACCESS_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ status: 'unauthorized' });
+        }
+        req.decoded = decoded;
+        next();
+    })
+
+}
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.g8zjk15.mongodb.net/?retryWrites=true&w=majority`;
@@ -46,6 +66,11 @@ async function run() {
         })
 
         // users api
+        app.get('/users', verifyJWT, async (req, res) => {
+            const result = await userCollesction.find().toArray();
+            res.send(result);
+        })
+
         app.post('/users', async (req, res) => {
             // console.log(req.body)
             const user = req.body;
