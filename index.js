@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const jwt = require('jsonwebtoken');
+
 require('dotenv').config();
 
 const app = express();
@@ -33,6 +35,15 @@ async function run() {
         await client.connect();
 
         const userCollesction = client.db('creativeLensDB').collection('users');
+
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+
+            const token = jwt.sign(user, process.env.JWT_ACCESS_TOKEN, { expiresIn: '1h' });
+
+            res.send({ token: token });
+
+        })
 
         // users api
         app.post('/users', async (req, res) => {
