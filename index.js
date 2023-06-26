@@ -82,7 +82,9 @@ async function run() {
                 const result = await userCollesction.insertOne(user);
                 res.send(result);
             }
-            res.send({ status: false })
+            else {
+                res.send({ status: false })
+            }
 
         })
 
