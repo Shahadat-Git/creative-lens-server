@@ -38,7 +38,12 @@ const verifyJWT = (req, res, next) => {
 
 
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.g8zjk15.mongodb.net/?retryWrites=true&w=majority`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.g8zjk15.mongodb.net/?retryWrites=true&w=majority`;
+
+
+const uri = `mongodb://127.0.0.1:27017`;
+
+
 
 
 
@@ -54,7 +59,7 @@ async function run() {
     try {
         await client.connect();
 
-        const userCollesction = client.db('creativeLensDB').collection('users');
+        const usersCollection = client.db('creativeLensDB').collection('users');
 
         app.post('/jwt', (req, res) => {
             const user = req.body;
@@ -67,7 +72,7 @@ async function run() {
 
         // users api
         app.get('/users', verifyJWT, async (req, res) => {
-            const result = await userCollesction.find().toArray();
+            const result = await usersCollection.find().toArray();
             res.send(result);
         })
 
@@ -76,17 +81,33 @@ async function run() {
             const user = req.body;
             const query = { email: user.email };
 
-            const isFound = await userCollesction.findOne(query);
+            const isFound = await usersCollection.findOne(query);
             // console.log(isFound)
             if (!isFound) {
-                const result = await userCollesction.insertOne(user);
+                const result = await usersCollection.insertOne(user);
                 res.send(result);
             }
             else {
                 res.send({ status: false })
             }
 
-        })
+        });
+
+        app.get('/users/status/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            console.log(req.decoded.email)
+            console.log(email)
+            if (!req.decoded.email === email) {
+                return res.send({ status: 'unauthorized user' })
+            }
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            if (!user) {
+                return res.send({ status: 'status not found' })
+            }
+            const result = { status: user?.role }
+            res.send(result);
+        });
 
 
 
