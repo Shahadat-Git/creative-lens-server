@@ -62,6 +62,22 @@ async function run() {
         const usersCollection = client.db('creativeLensDB').collection('users');
         const classedCollection = client.db('creativeLensDB').collection('classes');
 
+
+        // instructor verify
+        const verifyInstructor = async (req, res, next) => {
+            const email = req.decoded.email;
+
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'instructor') {
+                return res.status(403).send({ error: true, message: 'forbidden message' });
+            }
+            next();
+
+
+        }
+
+        // create jwt token
         app.post('/jwt', (req, res) => {
             const user = req.body;
 
@@ -96,9 +112,7 @@ async function run() {
 
         app.get('/users/status/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
-            console.log(req.decoded.email)
-            console.log(email)
-            if (!req.decoded.email === email) {
+            if (req.decoded.email !== email) {
                 return res.send({ status: 'unauthorized user' })
             }
             const query = { email: email }
@@ -110,14 +124,24 @@ async function run() {
             res.send(result);
         });
 
-
+        
         // classes apis
+        app.get('/my-classes/:email', verifyJWT, verifyInstructor, async (req, res) => {
+            const email = req.params.email;
+            if (req.decoded.email !== email) {
+                return res.send({ status: 'unauthorized user' })
+            }
+            const query = { instructorEmail: email };
+            const result = await classedCollection.find(query).toArray();
+            res.send(result);
+        })
 
-        app.post('/classes',verifyJWT, async (req, res) => {
+        app.post('/classes', verifyJWT,verifyInstructor, async (req, res) => {
             const classData = req.body;
             const result = await classedCollection.insertOne(classData);
             res.send(result);
-        })
+        });
+
 
 
         // Send a ping to confirm a successful connection
