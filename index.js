@@ -60,6 +60,7 @@ async function run() {
         await client.connect();
 
         const usersCollection = client.db('creativeLensDB').collection('users');
+        const classedCollection = client.db('creativeLensDB').collection('classes');
 
         app.post('/jwt', (req, res) => {
             const user = req.body;
@@ -70,7 +71,7 @@ async function run() {
 
         })
 
-        // users api
+        // users apis
         app.get('/users', verifyJWT, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
@@ -109,6 +110,14 @@ async function run() {
             res.send(result);
         });
 
+
+        // classes apis
+
+        app.post('/classes',verifyJWT, async (req, res) => {
+            const classData = req.body;
+            const result = await classedCollection.insertOne(classData);
+            res.send(result);
+        })
 
 
         // Send a ping to confirm a successful connection
