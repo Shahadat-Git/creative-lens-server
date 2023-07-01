@@ -177,6 +177,22 @@ async function run() {
             res.send(result);
         })
 
+        app.put('/class/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            // console.log(req.body, req.params.id)
+            const id = req.params.id;
+            const data = req.body;
+            const query = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    feedback: data.feedback,
+                }
+            };
+            const options = { upsert: true };
+            const result = await classedCollection.updateOne(query, updatedDoc, options);
+
+            res.send(result);
+        })
+
 
 
         // Send a ping to confirm a successful connection
