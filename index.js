@@ -38,10 +38,10 @@ const verifyJWT = (req, res, next) => {
 
 
 
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.g8zjk15.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.g8zjk15.mongodb.net/?retryWrites=true&w=majority`;
 
 
-const uri = `mongodb://127.0.0.1:27017`;
+// const uri = `mongodb://127.0.0.1:27017`;
 
 
 
@@ -61,6 +61,21 @@ async function run() {
 
         const usersCollection = client.db('creativeLensDB').collection('users');
         const classedCollection = client.db('creativeLensDB').collection('classes');
+
+
+        // admin verify
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden message' });
+            }
+            next();
+
+
+        }
 
 
         // instructor verify
@@ -124,8 +139,20 @@ async function run() {
             res.send(result);
         });
 
-        
+
         // classes apis
+        app.get('/classes', verifyJWT, verifyAdmin, async (req, res) => {
+            const result = await classedCollection.find().toArray();
+            res.send(result);
+        })
+
+        app.post('/classes', verifyJWT, verifyInstructor, async (req, res) => {
+            const classData = req.body;
+            const result = await classedCollection.insertOne(classData);
+            res.send(result);
+        });
+
+
         app.get('/my-classes/:email', verifyJWT, verifyInstructor, async (req, res) => {
             const email = req.params.email;
             if (req.decoded.email !== email) {
@@ -135,12 +162,6 @@ async function run() {
             const result = await classedCollection.find(query).toArray();
             res.send(result);
         })
-
-        app.post('/classes', verifyJWT,verifyInstructor, async (req, res) => {
-            const classData = req.body;
-            const result = await classedCollection.insertOne(classData);
-            res.send(result);
-        });
 
 
 
