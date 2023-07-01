@@ -152,6 +152,23 @@ async function run() {
             res.send(result);
         });
 
+        app.patch('/classes/:id', verifyJWT, verifyInstructor, async (req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            // console.log(data)
+            const query = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    name: data.name,
+                    img: data.img,
+                    seats: data.seats,
+                    price: data.price,
+                }
+            }
+            const result = await classedCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        })
+
 
         app.get('/my-classes/:email', verifyJWT, verifyInstructor, async (req, res) => {
             const email = req.params.email;
@@ -161,7 +178,14 @@ async function run() {
             const query = { instructorEmail: email };
             const result = await classedCollection.find(query).toArray();
             res.send(result);
-        })
+        });
+
+        app.get('/class/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await classedCollection.findOne(query);
+            res.send(result);
+        });
 
         app.patch('/class/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
@@ -175,7 +199,7 @@ async function run() {
             }
             const result = await classedCollection.updateOne(query, updatedDoc);
             res.send(result);
-        })
+        });
 
         app.put('/class/:id', verifyJWT, verifyAdmin, async (req, res) => {
             // console.log(req.body, req.params.id)
