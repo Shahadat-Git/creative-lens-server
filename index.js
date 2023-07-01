@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
@@ -160,6 +160,20 @@ async function run() {
             }
             const query = { instructorEmail: email };
             const result = await classedCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        app.patch('/class/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            // console.log(id, data)
+            const query = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    status: data.status,
+                }
+            }
+            const result = await classedCollection.updateOne(query, updatedDoc);
             res.send(result);
         })
 
