@@ -61,6 +61,7 @@ async function run() {
 
         const usersCollection = client.db('creativeLensDB').collection('users');
         const classedCollection = client.db('creativeLensDB').collection('classes');
+        const cartsCollection = client.db('creativeLensDB').collection('carts')
 
 
         // admin verify
@@ -221,6 +222,22 @@ async function run() {
             const result = await classedCollection.updateOne(query, updatedDoc, options);
 
             res.send(result);
+        });
+
+        // approved classes
+        app.get('/classes/approved', async (req, res) => {
+            const query = { status: 'approved' };
+            const result = await classedCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        // cart apis
+        app.post('/carts', verifyJWT, async (req, res) => {
+            const data = req.body;
+            // console.log(data)
+            const result = await cartsCollection.insertOne(data);
+            res.send(result);
+
         })
 
 
