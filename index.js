@@ -140,6 +140,13 @@ async function run() {
         });
 
 
+        // for instructors
+        app.get('/instructors', async (req, res) => {
+            const query = { role: 'instructor' };
+            const result = await usersCollection.find(query).toArray();
+            res.send(result);
+        })
+
         // classes apis
         app.get('/classes', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await classedCollection.find().toArray();
@@ -160,7 +167,6 @@ async function run() {
             const updatedDoc = {
                 $set: {
                     name: data.name,
-                    img: data.img,
                     seats: data.seats,
                     price: data.price,
                 }
