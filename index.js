@@ -129,6 +129,19 @@ async function run() {
 
         });
 
+        app.patch('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            const query = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: data.role,
+                }
+            }
+            const result = await usersCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        })
+
         app.get('/users/status/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             if (req.decoded.email !== email) {
