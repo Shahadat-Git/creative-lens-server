@@ -7,6 +7,8 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
+
 
 // middleware
 app.use(cors());
@@ -60,8 +62,9 @@ async function run() {
         await client.connect();
 
         const usersCollection = client.db('creativeLensDB').collection('users');
-        const classedCollection = client.db('creativeLensDB').collection('classes');
+        const classesCollection = client.db('creativeLensDB').collection('classes');
         const cartsCollection = client.db('creativeLensDB').collection('carts')
+        const paymentCollection = client.db('creativeLensDB').collection('payment');
 
 
         // admin verify
@@ -150,13 +153,13 @@ async function run() {
 
         // classes apis
         app.get('/classes', verifyJWT, verifyAdmin, async (req, res) => {
-            const result = await classedCollection.find().toArray();
+            const result = await classesCollection.find().toArray();
             res.send(result);
         })
 
         app.post('/classes', verifyJWT, verifyInstructor, async (req, res) => {
             const classData = req.body;
-            const result = await classedCollection.insertOne(classData);
+            const result = await classesCollection.insertOne(classData);
             res.send(result);
         });
 
@@ -172,7 +175,7 @@ async function run() {
                     price: data.price,
                 }
             }
-            const result = await classedCollection.updateOne(query, updatedDoc);
+            const result = await classesCollection.updateOne(query, updatedDoc);
             res.send(result);
         })
 
@@ -183,14 +186,14 @@ async function run() {
                 return res.send({ status: 'unauthorized user' })
             }
             const query = { instructorEmail: email };
-            const result = await classedCollection.find(query).toArray();
+            const result = await classesCollection.find(query).toArray();
             res.send(result);
         });
 
         app.get('/class/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
-            const result = await classedCollection.findOne(query);
+            const result = await classesCollection.findOne(query);
             res.send(result);
         });
 
@@ -204,7 +207,7 @@ async function run() {
                     status: data.status,
                 }
             }
-            const result = await classedCollection.updateOne(query, updatedDoc);
+            const result = await classesCollection.updateOne(query, updatedDoc);
             res.send(result);
         });
 
@@ -219,7 +222,7 @@ async function run() {
                 }
             };
             const options = { upsert: true };
-            const result = await classedCollection.updateOne(query, updatedDoc, options);
+            const result = await classesCollection.updateOne(query, updatedDoc, options);
 
             res.send(result);
         });
@@ -227,17 +230,88 @@ async function run() {
         // approved classes
         app.get('/classes/approved', async (req, res) => {
             const query = { status: 'approved' };
-            const result = await classedCollection.find(query).toArray();
+            const result = await classesCollection.find(query).toArray();
             res.send(result);
         })
 
         // cart apis
+
         app.post('/carts', verifyJWT, async (req, res) => {
             const data = req.body;
             // console.log(data)
             const result = await cartsCollection.insertOne(data);
             res.send(result);
 
+        });
+
+        app.get('/carts/:email', verifyJWT, async (req, res) => {
+            const email = req.params?.email;
+            const query = { email: email };
+            const result = await cartsCollection.find(query).toArray();
+            res.send(result);
+        });
+
+
+        app.get('/cart/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            // console.log(id)
+            const query = { _id: new ObjectId(id) };
+            const result = await cartsCollection.findOne(query);
+            res.send(result);
+        })
+
+        app.delete('/carts/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await cartsCollection.deleteOne(query);
+            res.send(result);
+        })
+
+
+        // create payment intent
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
+
+
+        // payment related api
+        app.get('/payments/:email', verifyJWT, async (req, res) => {
+            const query = { email: req.params?.email };
+            const sort = { date: -1 };
+            const result = await paymentCollection.find(query).sort(sort).toArray();
+            res.send(result);
+        })
+
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const query = { _id: new ObjectId(payment.cartItemId) }
+            const deleteResult = await cartsCollection.deleteOne(query)
+
+            const classQuery = { _id: new ObjectId(payment.classId) }
+            const selectedClass = await classesCollection.findOne(classQuery);
+
+
+            const classUpdate = {
+                $set: {
+                    seats: selectedClass?.seats - 1,
+                }
+            }
+
+            const deleteSets = await classesCollection.updateOne(classQuery, classUpdate)
+
+            res.send({ insertResult, deleteResult, deleteSets });
         })
 
 
