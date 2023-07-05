@@ -164,6 +164,15 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/instructors/popular', async (req, res) => {
+            const query = { role: 'instructor' };
+            sort = { students: -1 }
+            const result = await usersCollection.find(query).sort(sort).limit(6).toArray();
+            res.send(result);
+        })
+
+
+
         // classes apis
         app.get('/classes', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await classesCollection.find().toArray();
@@ -240,6 +249,13 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/classes/popular', async (req, res) => {
+            const sort = { enrolled: -1 };
+            const projection = { name: 1, img: 1, enrolled: 1 }
+            const result = await classesCollection.find().limit(6).sort(sort).project(projection).toArray();
+            res.send(result);
+        })
+
         // approved classes
         app.get('/classes/approved', async (req, res) => {
             const query = { status: 'approved' };
@@ -312,19 +328,36 @@ async function run() {
             const query = { _id: new ObjectId(payment.cartItemId) }
             const deleteResult = await cartsCollection.deleteOne(query)
 
+            // class data update
+
             const classQuery = { _id: new ObjectId(payment.classId) }
             const selectedClass = await classesCollection.findOne(classQuery);
 
+            const options = { upsert: true };
 
             const classUpdate = {
                 $set: {
                     seats: selectedClass?.seats - 1,
+                    enrolled: selectedClass?.enrolled ? selectedClass?.enrolled + 1 : 1,
                 }
             }
 
-            const deleteSets = await classesCollection.updateOne(classQuery, classUpdate)
+            const deleteSets = await classesCollection.updateOne(classQuery, classUpdate, options)
 
-            res.send({ insertResult, deleteResult, deleteSets });
+            // user data update
+            const userQuery = { email: payment?.instructorEmail };
+            const classInstructor = await usersCollection.findOne(userQuery);
+
+            const userUpdate = {
+                $set: {
+                    students: classInstructor?.students ? classInstructor?.students + 1 : 1,
+                }
+            }
+
+            const userUpdateResult = await usersCollection.updateOne(userQuery, userUpdate, options)
+
+
+            res.send({ insertResult, deleteResult, deleteSets, userUpdateResult });
         })
 
 
