@@ -59,7 +59,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        await client.connect();
+        client.connect();
 
         const usersCollection = client.db('creativeLensDB').collection('users');
         const classesCollection = client.db('creativeLensDB').collection('classes');
